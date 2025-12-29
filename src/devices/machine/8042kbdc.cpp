@@ -510,6 +510,9 @@ void kbdc8042_device::data_w(offs_t offset, uint8_t data)
 		case 0xae:  /* enable keyboard interface */
 			m_keyboard.on = 1;
 			break;
+		case 0xb3: /* Unknown CHIPS KBC command, ataripc4 needs this to boot.*/
+			at_8042_receive(0);
+			break;
 		case 0xc0:  /* read input port */
 			/*  |7|6|5|4|3 2 1 0|  8042 Input Port
 			 *   | | | |    |

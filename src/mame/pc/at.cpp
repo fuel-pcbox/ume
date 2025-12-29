@@ -111,6 +111,7 @@ Variants: T denotes an active 8.4" display, C a passive 9.5" color display. 3560
 #include "bus/pc_kbd/pc_kbdc.h"
 #include "cpu/i386/i386.h"
 #include "cpu/i86/i286.h"
+#include "machine/8042kbdc.h"
 #include "machine/at.h"
 #include "machine/cs8221.h"
 #include "machine/ds128x.h"
@@ -296,6 +297,7 @@ void at_state::neat_io(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x00ff).m(m_mb, FUNC(at_mb_device::map));
+	map(0x0060, 0x0067).rw("kbdc", FUNC(kbdc8042_device::data_r), FUNC(kbdc8042_device::data_w));
 	map(0x0022, 0x0023).m("cs8221", FUNC(cs8221_device::map));
 }
 
@@ -491,6 +493,13 @@ void at_state::neat(machine_config &config)
 	rtc.irq().set("mb:pic8259_slave", FUNC(pic8259_device::ir0_w)); // this is in :mb
 	rtc.set_century_index(0x32);
 
+	//Some NEAT machines require an HLE keyboard controller due to using commands the LLE one doesn't recognize.
+	kbdc8042_device &kbdc(KBDC8042(config, "kbdc"));
+	kbdc.set_keyboard_type(kbdc8042_device::KBDC8042_STANDARD);
+	kbdc.system_reset_callback().set_inputline(m_maincpu, INPUT_LINE_RESET);
+	kbdc.gate_a20_callback().set_inputline(m_maincpu, INPUT_LINE_A20);
+	kbdc.input_buffer_full_callback().set("mb:pic8259_master", FUNC(pic8259_device::ir1_w));
+
 	CS8221(config, "cs8221", 0, "maincpu", "mb:isa", "bios");
 }
 
@@ -607,6 +616,13 @@ void at_state::ct386sx(machine_config &config)
 	at386sx(config);
 	m_maincpu->set_addrmap(AS_IO, &at_state::neat_io);
 	CS8221(config, "cs8221", 0, "maincpu", "mb:isa", "maincpu");
+
+	//Some NEAT machines require an HLE keyboard controller due to using commands the LLE one doesn't recognize.
+	kbdc8042_device &kbdc(KBDC8042(config, "kbdc"));
+	kbdc.set_keyboard_type(kbdc8042_device::KBDC8042_STANDARD);
+	kbdc.system_reset_callback().set_inputline(m_maincpu, INPUT_LINE_RESET);
+	kbdc.gate_a20_callback().set_inputline(m_maincpu, INPUT_LINE_A20);
+	kbdc.input_buffer_full_callback().set("mb:pic8259_master", FUNC(pic8259_device::ir1_w));
 }
 
 // Commodore PC 30-III
